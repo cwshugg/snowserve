@@ -1,13 +1,15 @@
 # A collection of python classes used to listen in on both an IPv4 and IPv6
 # socket.
 #
+# Helpful documentation: https://docs.python.org/3/library/socket.html
+#
 #   Connor Shugg
+#   May 2020
 
 # Library inclusions
 import socket;              # for sockets
 
-
-# ================================ Main Class =============================== #
+# ============================= Listener Class ============================== #
 # Python class used to spin up sockets on both IPv4 and IPv6 addresses to
 # listen in on a port for client connections
 class SocketListener:
@@ -59,6 +61,45 @@ class SocketListener:
     
 
     # -------------------------- Utility Functions -------------------------- #
+    # Prints the string only if 'verbose' is True
+    def vprint(self, msg):
+        if (self.verbose):
+            print(msg);
+
+
+
+
+# ============================== Talker Class =============================== #
+# A class used by client threads to read from and write to a client socket.
+class SocketTalker:
+    # Constructor: takes in a verbose setting and a client socket
+    def __init__(self, v, csock):
+        # set up class fields
+        self.verbose = v;
+        self.socket = csock;
+   
+    # Closes the client socket
+    def close(self):
+        self.socket.close();
+
+
+    # ---------------------- Socket Reading/Writing ------------------------- #
+    # Calls recv() on the client socket, and returns the read-in data. If the
+    # socket has been closed, None is returned
+    def read(self, limit = 1024):
+        data = self.socket.recv(limit);
+        # if the socket is closed, return None
+        if (not data):
+            return None;
+        # otherwise, return the data
+        return data;
+    
+    # Takes a given message and writes it to the client socket
+    def write(self, msg):
+        self.socket.sendall(bytes(msg));
+
+
+    # ------------------------- Utility Functions --------------------------- #
     # Prints the string only if 'verbose' is True
     def vprint(self, msg):
         if (self.verbose):

@@ -2,13 +2,17 @@
 # listen in on an IPv4 and IPv6 socket to accept client connections
 #
 #   Connor Shugg
+#   May 2020
 
 # Library inclusions
 import sys;             # for command-line arguments
 import getopt;          # for command-line argument parsing
 import threading;       # for multithreading
 from time import sleep; # for testing
+
+# Module inclusions
 from sockets import SocketListener;
+from clients import ClientThread;
 
 
 # ============================== Server Class =============================== #
@@ -26,9 +30,14 @@ class Server:
         self.accepters4 = [None] * na4;
         self.accepters6 = [None] * na6;
 
-        # create a new SocketListener for both IPv4 and IPv6
-        self.listener4 = SocketListener(self.verbose, self.port, 4);
-        self.listener6 = SocketListener(self.verbose, self.port, 6);
+        # create a new SocketListener for both IPv4 and IPv6 (as long as we
+        # have at least 1 listener thread for each)
+        self.listener4 = None;
+        self.listener6 = None;
+        if (na4 > 0):
+            self.listener4 = SocketListener(self.verbose, self.port, 4);
+        if (na6 > 0):
+            self.listener6 = SocketListener(self.verbose, self.port, 6);
         # spawn the accepter threads
         self.accepters_spawn();
     
@@ -40,14 +49,14 @@ class Server:
         # spawn the ipv4 accepters
         for i in range(len(self.accepters4)):
             # initialize the thread object and spin it up
-            self.accepters4[i] = ListenerThread(self.verbose, self.listener4, i);
+            self.accepters4[i] = ListenerThread(self.verbose, self.listener4, i, 4);
             self.accepters4[i].start();
 
         # spawn the ipv6 accepters
         for i in range(len(self.accepters6)):
             tid = i + len(self.accepters4);
             # initialize the thread object and spin it up
-            self.accepters6[i] = ListenerThread(self.verbose, self.listener6, tid);
+            self.accepters6[i] = ListenerThread(self.verbose, self.listener6, tid, 6);
             self.accepters6[i].start();
     
     # Toggles all the accepter threads' kill switches and joins them
@@ -78,9 +87,9 @@ class Server:
 # A class that defines a thread tasked with listening on a given socket for
 # client connections
 class ListenerThread (threading.Thread):
-    # Constructor: takes in a verbose setting, a socket to listen on, and a
-    # thread id
-    def __init__(self, v, l, t):
+    # Constructor: takes in a verbose setting, a socket to listen on, a thread
+    # id, and an 'address type' - either 4 or 6
+    def __init__(self, v, l, t, at):
         # call parent constructor
         threading.Thread.__init__(self, target=self.listen);
 
@@ -88,27 +97,31 @@ class ListenerThread (threading.Thread):
         self.verbose = v;
         self.listener = l;
         self.tid = t;
-        self.kill = False;
-        
-
+        self.addrtype = at;
+        self.kill = False; 
 
     # The main function listener threads run
     def listen(self):
-        self.vprint("Accepter Thread [ID: %d] spawned." % self.tid);
+        self.vprint("Spawned.");
         # iterate until the kill switch is toggled
         while (not self.kill):
-            sleep(1);
-            self.vprint("Accepter Thread [ID: %d] checking in!" % self.tid);
+            self.vprint("Waiting for next client...");
+            csock = self.listener.accept();
+
+            # spawn a new thread to handle the client connection
+            cthread = ClientThread(self.verbose, csock, 5);
+            cthread.start();
+
+            
         
-        
-        self.vprint("Accepter Thread [ID: %d] exiting." % self.tid);
+        self.vprint("Exiting.");
 
     
     # -------------------------- Utility Functions -------------------------- #
     # Prints the string only if self.verbose is True
     def vprint(self, msg):
         if (self.verbose):
-            print(msg);
+            print("Accepter [ID %d] (IPv%d) %s" % (self.tid, self.addrtype, msg));
 
 
 
@@ -143,7 +156,6 @@ def main():
         elif (opt in ("-a", "--accepters")):    # -a (--accepters)
             try:
                 threadCounts = arg.split(",");
-                print("Thread counts: " + str(threadCounts));
                 n4 = int(threadCounts[0]);
                 n6 = int(threadCounts[1]);
             except:
@@ -175,6 +187,6 @@ def usage():
 
 # =========== Runner Code =========== #
 server = main();
-sleep(10);
-server.accepters_kill();
+#sleep(10);
+#server.accepters_kill();
 
