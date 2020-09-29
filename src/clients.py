@@ -8,7 +8,9 @@
 import threading;       # for multithreaded client-handling
 
 # Modudle inclusions
-from sockets import SocketTalker;
+from sockets import SocketTalker;           # for server-client communication
+from http_messages import HTTPRequest;      # for request message parsing
+from http_messages import HTTPParseError;   # for request error checking
 
 
 # ========================= Client Thread Class ============================= #
@@ -37,15 +39,24 @@ class ClientThread (threading.Thread):
             self.exit();
 
         # otherwise, we can assume SOME sort of data was read from the socket
-        self.vprint("Data:\n%s" % data);
-        self.talker.write("Uhhhh hello?\r\n");
-        self.talker.close();
+        self.transact(data);
+
+        # close the connection and have the thread exit
+        self.exit();
     
     # The function that's run when the thread exits
     def exit(self):
         # close the socket and return
         self.talker.close();
         return;
+    
+    # Takes in the raw text data and attempts to complete a single transaction
+    def transact(self, data):
+        # create a HTTPRequest object and parse the message contents
+        req = HTTPRequest(str(data, "utf-8"));
+        parse_error = req.parse();
+
+        self.talker.write("HTTP 200 OK\r\n\r\nParse Error: %d" % int(parse_error));
 
 
     # ------------------------- Utility Functions --------------------------- #

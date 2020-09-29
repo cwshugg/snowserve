@@ -112,8 +112,6 @@ class ListenerThread (threading.Thread):
             cthread = ClientThread(self.verbose, csock, 5);
             cthread.start();
 
-            
-        
         self.vprint("Exiting.");
 
     
@@ -131,7 +129,7 @@ class ListenerThread (threading.Thread):
 # socketListener
 def main():
     verbose = False;
-    port = 13650;
+    port = 8080;
     n4 = 1;
     n6 = 1;
 

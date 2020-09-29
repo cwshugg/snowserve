@@ -33,10 +33,20 @@ class SocketListener:
             self.socket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM);
         else:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM);
+        
+        # use getaddrinfo() to find an IPv4/6 address to bind to (only TCP)
+        # NOTE: on Azure VMs, I can't seem to be able to bind to an IPv6 socket
+        # in this way. It must be something to do with how I set it up.
+        for addrinfo in socket.getaddrinfo(socket.gethostname(), self.port,
+                                           family=self.socket.family,
+                                           proto=socket.IPPROTO_TCP):
+            # take the first address found that has the protocol and family
+            # we specified, and bind the socket to it. Then, exit the loop
+            chosen_address = addrinfo[4]
+            self.socket.bind(chosen_address)
+            break
 
-        # bind both sockets to the same hostname, and the given port
-        self.socket.bind((socket.gethostname(), self.port));    
-        # set both sockets to listen
+        # set the socket to listen
         self.socket.listen(5);
         
         # make some debug prints
@@ -96,7 +106,7 @@ class SocketTalker:
     
     # Takes a given message and writes it to the client socket
     def write(self, msg):
-        self.socket.sendall(bytes(msg));
+        self.socket.sendall(bytes(msg, encoding="utf8"));
 
 
     # ------------------------- Utility Functions --------------------------- #
