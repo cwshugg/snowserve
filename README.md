@@ -1,5 +1,5 @@
 # Personal Python Webserver
-Evidently, I decided that learning how to use pre-existing web servers isn't fun enough, because here we are! I decided to write on in Python instead.
+Evidently, I decided that learning how to use pre-existing web servers isn't fun enough, because here we are! I decided to write one in Python instead.
 
 ## Threading
 This server takes a multithreaded approach. At runtime, the number of "accepter" threads can be specified, both for an IPv4 and IPv6 address. These threads are responsible only for listening in on a socket for connections and spawning client threads.
