@@ -7,16 +7,17 @@
 # Library inclusions
 from enum import IntEnum;
 
-# ======================== HTTP Request Error Enum ========================== #
+# ========================= HTTP Request Error Enum ========================= #
 # Stores various values corresponding to parse errors
 class HTTPParseError (IntEnum):
     PARSE_ERROR = 1             # generic parsing error
     BAD_METHOD = 2              # bad request method
     BAD_TARGET = 3              # bad target URI
-    REQUEST_TOO_LONG = 4        # the request was too long
+    BAD_VERSION = 4             # bad HTTP/X.X version
+    REQUEST_TOO_LONG = 5        # the request was too long
 
 
-# ========================== HTTP Request Class ============================= #
+# =========================== HTTP Request Class ============================ #
 # A class that defines a single HTTP request message
 class HTTPRequest:
     # Constructor: takes in the string making up the request message
@@ -40,18 +41,28 @@ class HTTPRequest:
             lines = self.text.split("\r\n");
     
             # take the first line and parse out the three fields
-            startFields = lines[0].split(" ");
+            start_fields = lines[0].split(" ");
             # request method
-            self.method = startFields[0].strip();
+            self.method = start_fields[0].strip();
             err = self.enforcer.validate_method(self.method);   # error check
             if (err):
                 return err;
 
             # request target
-            self.target = startFields[1].strip();
+            self.target = start_fields[1].strip();
             err = self.enforcer.validate_target(self.target);   # error check
             if (err):
                 return err;
+            
+            # request version
+            self.version = start_fields[2].strip()
+            self.version = self.version.replace("HTTP/", "")
+            # validate the remaining string before parsing as a float
+            err = self.enforcer.validate_version(self.version)  # error check
+            if (err):
+                return err
+            # parse version as a float
+            self.version = float(self.version)
             
             # iterate through the remaining lines to pick out headers
             lines = lines[1:]
@@ -109,6 +120,7 @@ class HTTPEnforcer:
         # TODO: Instead of using hardcoded arrays, add in config files
         self.allowed_methods = ["GET", "POST"];
         self.allowed_targets = ["/", "/ifttt"];
+        self.allowed_versions = [1.1];
     
     # Takes in a HTTP method and checks to see if it's allowed. Returns a 0
     # on success, and a HTTPParseError on error
@@ -125,3 +137,19 @@ class HTTPEnforcer:
             return 0
         else:
             return HTTPParseError.BAD_TARGET
+    
+    # Takes in a halfway-parsed HTTP version number (should look like "1.1")
+    # and determines 1) if it can be parsed, and 2) if the version is accepted
+    # by the web server. Returns a 0 on success, and a HTTPParseError on error
+    def validate_version(self, version):
+        # attempt to convert to an integer
+        try:
+            version = float(version)
+        except:
+            return HTTPParseError.BAD_VERSION
+        # if the above worked, ensure the version is allowed
+        if (version in self.allowed_versions):
+            return 0
+        else:
+            return HTTPParseError.BAD_VERSION
+

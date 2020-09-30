@@ -8,10 +8,11 @@
 import sys;             # for command-line arguments
 import getopt;          # for command-line argument parsing
 import threading;       # for multithreading
+from signal import signal, SIGINT   # for signal handling
 from time import sleep; # for testing
 
 # Module inclusions
-from sockets import SocketListener;
+from sockets import SocketListener, FakeConnection;
 from clients import ClientThread;
 
 
@@ -29,6 +30,9 @@ class Server:
         # set up variables for the accepter threads
         self.accepters4 = [None] * na4;
         self.accepters6 = [None] * na6;
+
+        # register a signal handler
+        signal(SIGINT, self.sigint_handler)
 
         # create a new SocketListener for both IPv4 and IPv6 (as long as we
         # have at least 1 listener thread for each)
@@ -63,9 +67,11 @@ class Server:
     def accepters_kill(self):
         # toggle all kill switches
         for i in range(len(self.accepters4)):
-            self.accepters4[i].kill = True;
+            #self.accepters4[i].kill = True;
+            self.accepters4[i].kill_and_exit()
         for i in range(len(self.accepters6)):
-            self.accepters6[i].kill = True;
+            #self.accepters6[i].kill = True;
+            self.accepters6[i].kill_and_exit()
 
         # join all threads
         for i in range(len(self.accepters4)):
@@ -79,6 +85,17 @@ class Server:
     def vprint(self, msg):
         if (self.verbose):
             print(msg);
+    
+    # A handler for Ctrl+C that asks the accepter threads to exit before
+    # shutting down
+    def sigint_handler(self, sig, frame):
+        print("SIGINT CAUGHT: CLOSING DOWN ACCEPTER THREADS")
+        print(self)
+        print(signal)
+        print(frame)
+
+        self.accepters_kill()
+        exit(0)
 
 
 
@@ -98,7 +115,10 @@ class ListenerThread (threading.Thread):
         self.listener = l;
         self.tid = t;
         self.addrtype = at;
-        self.kill = False; 
+        self.kill = False;
+
+        # set up a threading event
+        self.event = threading.Event()
 
     # The main function listener threads run
     def listen(self):
@@ -114,6 +134,14 @@ class ListenerThread (threading.Thread):
 
         self.vprint("Exiting.");
 
+    # Helper function that sets the kill flag and makes an artificial connection
+    # with the blocked socket
+    def kill_and_exit(self):
+        self.kill = True
+        self.vprint("Setting thread kill switch and opening fake connection...")
+        # fake a connection to get the accepter thread to stop blocking
+        fconn = FakeConnection(self.listener)
+        fconn.trigger()
     
     # -------------------------- Utility Functions -------------------------- #
     # Prints the string only if self.verbose is True

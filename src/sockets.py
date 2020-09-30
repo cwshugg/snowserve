@@ -116,6 +116,22 @@ class SocketTalker:
             print(msg);
 
 
+# ========================== Fake Connection Class ========================== #
+# A small class used to 'fake' a connection to an accepter thread. This is done
+# when shutting the server down to get each accepter thread to stop blocking
+# on the accept() system call
+class FakeConnection:
+    # the constructor takes in a SocketListener object belonging to the thread
+    def __init__(self, listener):
+        self.listener = listener
+    
+    # uses the listener to open a socket to the thread listening on it
+    def trigger(self):
+        # create the socket, connect, then close
+        sock = socket.socket(self.listener.socket.family, self.listener.socket.type)
+        sock.connect((socket.gethostname(), self.listener.port))
+        sock.sendall("FAKE CONNECTION: THREAD SHUTDOWN".encode())
+        sock.close()
 
 
 # =========== Runner Code =========== #
