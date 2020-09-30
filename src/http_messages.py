@@ -5,7 +5,7 @@
 #   June 2020
 
 # Library inclusions
-from enum import IntEnum;
+from enum import IntEnum
 
 # ========================= HTTP Request Error Enum ========================= #
 # Stores various values corresponding to parse errors
@@ -22,15 +22,15 @@ class HTTPParseError (IntEnum):
 class HTTPRequest:
     # Constructor: takes in the string making up the request message
     def __init__(self, text):
-        self.text = text;
+        self.text = text
         # initialize start line fields
-        self.method = None;
-        self.target = None;
-        self.version = None;
+        self.method = None
+        self.target = None
+        self.version = None
         # initialize headers
-        self.headers = {};
+        self.headers = {}
         # initialize message body
-        self.body = None;
+        self.body = None
         # initialize a new enforcer object
         self.enforcer = HTTPEnforcer()
 
@@ -38,21 +38,21 @@ class HTTPRequest:
     # success and a nonzero value on error
     def parse(self):
             # split text by "\r\n" as a delimeter
-            lines = self.text.split("\r\n");
+            lines = self.text.split("\r\n")
     
             # take the first line and parse out the three fields
-            start_fields = lines[0].split(" ");
+            start_fields = lines[0].split(" ")
             # request method
-            self.method = start_fields[0].strip();
-            err = self.enforcer.validate_method(self.method);   # error check
+            self.method = start_fields[0].strip()
+            err = self.enforcer.validate_method(self.method)   # error check
             if (err):
-                return err;
+                return err
 
             # request target
-            self.target = start_fields[1].strip();
-            err = self.enforcer.validate_target(self.target);   # error check
+            self.target = start_fields[1].strip()
+            err = self.enforcer.validate_target(self.target)   # error check
             if (err):
-                return err;
+                return err
             
             # request version
             self.version = start_fields[2].strip()
@@ -118,9 +118,9 @@ class HTTPEnforcer:
     def __init__(self):
         self.header_limit = 64      # the maximum number of allowed headers
         # TODO: Instead of using hardcoded arrays, add in config files
-        self.allowed_methods = ["GET", "POST"];
-        self.allowed_targets = ["/", "/ifttt"];
-        self.allowed_versions = [1.1];
+        self.allowed_methods = ["GET", "POST"]
+        self.allowed_targets = ["/", "/ifttt"]
+        self.allowed_versions = [1.1]
     
     # Takes in a HTTP method and checks to see if it's allowed. Returns a 0
     # on success, and a HTTPParseError on error
