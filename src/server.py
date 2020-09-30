@@ -67,11 +67,9 @@ class Server:
     def accepters_kill(self):
         # toggle all kill switches
         for i in range(len(self.accepters4)):
-            #self.accepters4[i].kill = True;
-            self.accepters4[i].kill_and_exit()
+            self.accepters4[i].trigger_kill()
         for i in range(len(self.accepters6)):
-            #self.accepters6[i].kill = True;
-            self.accepters6[i].kill_and_exit()
+            self.accepters6[i].trigger_kill()
 
         # join all threads
         for i in range(len(self.accepters4)):
@@ -89,10 +87,7 @@ class Server:
     # A handler for Ctrl+C that asks the accepter threads to exit before
     # shutting down
     def sigint_handler(self, sig, frame):
-        print("SIGINT CAUGHT: CLOSING DOWN ACCEPTER THREADS")
-        print(self)
-        print(signal)
-        print(frame)
+        print("SIGINT caught: closing down accepter threads...")
 
         self.accepters_kill()
         exit(0)
@@ -136,7 +131,7 @@ class ListenerThread (threading.Thread):
 
     # Helper function that sets the kill flag and makes an artificial connection
     # with the blocked socket
-    def kill_and_exit(self):
+    def trigger_kill(self):
         self.kill = True
         self.vprint("Setting thread kill switch and opening fake connection...")
         # fake a connection to get the accepter thread to stop blocking
