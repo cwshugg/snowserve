@@ -6,6 +6,7 @@
 
 # Library inclusions
 import threading        # for multithreaded client-handling
+import sys              # for sys.exit()
 
 # Modudle inclusions
 from sockets import SocketTalker            # for server-client communication
@@ -33,8 +34,15 @@ class ClientThread (threading.Thread):
         self.vprint("Spawned.")
         
         # read data from the client. If nothing was read, we assume the client
-        # has closed the socket: end the connection
-        data = self.talker.read()
+        # has closed the socket: end the connection. If an exception occurs,
+        # print it out have the thread gracefully exit
+        data = None
+        try:
+            data = self.talker.read()
+        except Exception as e:
+            self.vprint("Error: could not read client data:\n%s" % str(e))
+            self.exit()
+        # if an exception wasn't thrown, but no data was read, exit
         if (data == None):
             self.exit()
 
@@ -47,15 +55,29 @@ class ClientThread (threading.Thread):
     
     # The function that's run when the thread exits
     def exit(self):
-        # close the socket and return
+        # close the socket and exit
         self.talker.close()
-        return
+        sys.exit()
     
     # Takes in the raw text data and attempts to complete a single transaction
     def transact(self, data):
-        # create a HTTPRequest object and parse the message contents
-        req = HTTPRequest(str(data, "utf-8"))
-        parse_error = req.parse()
+        if (data == None):
+            return
+        
+        # attempt to parse the data into a HTTPRequest object. If the parsing
+        # fails (one example: unable to decode a certain byte into utf-8),
+        # return from the function so the thread can gracefully exit
+        req = None
+        parse_error = -1
+        try:
+            # initialize the HTTPRequest object
+            req = HTTPRequest(str(data, "utf-8"))
+            # parse the client's data
+            parse_error = req.parse()
+        except Exception as e:
+            # on error, print the exception and exit the thread
+            self.vprint("Error: could not parse client data:\n%s" % str(e))
+            sys.exit()
 
         self.talker.write("HTTP 200 OK\r\n\r\nParse Error: %d" % int(parse_error))
 
