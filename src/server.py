@@ -212,6 +212,4 @@ def usage():
 
 # =========== Runner Code =========== #
 server = main()
-#sleep(10)
-#server.accepters_kill()
 
