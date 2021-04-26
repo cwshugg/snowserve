@@ -96,7 +96,7 @@ class SocketTalker:
     
     # Takes a given message and writes it to the client socket
     def write(self, msg):
-        self.socket.sendall(bytes(msg));
+        self.socket.sendall(str.encode(msg));
 
 
     # ------------------------- Utility Functions --------------------------- #

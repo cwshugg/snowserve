@@ -10,7 +10,6 @@ import threading;       # for multithreaded client-handling
 # Modudle inclusions
 from sockets import SocketTalker;
 
-
 # ========================= Client Thread Class ============================= #
 # A class that defines a thread tasked with handling a single client connection
 class ClientThread (threading.Thread):
@@ -37,8 +36,8 @@ class ClientThread (threading.Thread):
             self.exit();
 
         # otherwise, we can assume SOME sort of data was read from the socket
-        self.vprint("Data:\n%s" % data);
-        self.talker.write("Uhhhh hello?\r\n");
+        self.vprint("Data:\n%s" % data.decode());
+        self.talker.write("Uhhhh hello? %d\r\n" % client_thread_count);
         self.talker.close();
     
     # The function that's run when the thread exits
@@ -46,6 +45,9 @@ class ClientThread (threading.Thread):
         # close the socket and return
         self.talker.close();
         return;
+    
+
+    # --------------------------- HTTP Parsing ------------------------------ #
 
 
     # ------------------------- Utility Functions --------------------------- #
@@ -53,5 +55,3 @@ class ClientThread (threading.Thread):
     def vprint(self, msg):
         if (self.verbose):
             print("Client [ID %d] %s" % (self.tid, msg));
-
-

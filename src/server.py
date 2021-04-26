@@ -14,6 +14,10 @@ from time import sleep; # for testing
 from sockets import SocketListener;
 from clients import ClientThread;
 
+# Global variables
+CLIENT_THREAD_LIMIT = 5;
+client_spawn_semaphore = threading.Semaphore();
+
 
 # ============================== Server Class =============================== #
 # The main server class
