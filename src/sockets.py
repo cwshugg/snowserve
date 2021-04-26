@@ -7,7 +7,7 @@
 #   May 2020
 
 # Library inclusions
-import socket;              # for sockets
+import socket               # for sockets
 
 # ============================= Listener Class ============================== #
 # Python class used to spin up sockets on both IPv4 and IPv6 addresses to
@@ -17,11 +17,11 @@ class SocketListener:
     # Constructor that takes in a verbose option, a port number, and the type
     # of address to bind to (IPv4 = 4, IPv6 = 6)
     def __init__(self, v, p, t):
-        self.verbose = v;
-        self.port = p;
-        self.addrtype = t;
+        self.verbose = v
+        self.port = p
+        self.addrtype = t
         # set up the listener socket
-        self.setup();
+        self.setup()
    
 
     # ------------------------ Socket Setup/Teardown ------------------------ #
@@ -30,41 +30,51 @@ class SocketListener:
     def setup(self):
         # set up the socket
         if (self.addrtype == 6):
-            self.socket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM);
+            self.socket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         else:
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM);
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        
+        # use getaddrinfo() to find an IPv4/6 address to bind to (only TCP)
+        # NOTE: on Azure VMs, I can't seem to be able to bind to an IPv6 socket
+        # in this way. It must be something to do with how I set it up.
+        for addrinfo in socket.getaddrinfo(socket.gethostname(), self.port,
+                                           family=self.socket.family,
+                                           proto=socket.IPPROTO_TCP):
+            # take the first address found that has the protocol and family
+            # we specified, and bind the socket to it. Then, exit the loop
+            chosen_address = addrinfo[4]
+            self.socket.bind(chosen_address)
+            break
 
-        # bind both sockets to the same hostname, and the given port
-        self.socket.bind((socket.gethostname(), self.port));    
-        # set both sockets to listen
-        self.socket.listen(5);
+        # set the socket to listen
+        self.socket.listen(5)
         
         # make some debug prints
         self.vprint("Bound IPv%d socket: %s to port %d"
-                    % (self.addrtype, self.socket.getsockname(), self.port));
+                    % (self.addrtype, self.socket.getsockname(), self.port))
 
 
     # Closes the socket from setup()
     def close(self):
         # close the sockets
-        self.socket.close();
-        self.vprint("Closed IPv%d socket" % self.addrtype);
+        self.socket.close()
+        self.vprint("Closed IPv%d socket" % self.addrtype)
 
 
     # -------------------------- Client Accepting --------------------------- #
     # Accepts on the listener's socket. This call will block until a client
     # makes contact. The client's socket will be returned
     def accept(self):
-        (csock, addr) = self.socket.accept();
-        self.vprint("Accepted client (IPv%d) at %s" % (self.addrtype, str(addr)));
-        return csock;
+        (csock, addr) = self.socket.accept()
+        self.vprint("Accepted client (IPv%d) at %s" % (self.addrtype, str(addr)))
+        return csock
     
 
     # -------------------------- Utility Functions -------------------------- #
     # Prints the string only if 'verbose' is True
     def vprint(self, msg):
         if (self.verbose):
-            print(msg);
+            print(msg)
 
 
 
@@ -75,44 +85,61 @@ class SocketTalker:
     # Constructor: takes in a verbose setting and a client socket
     def __init__(self, v, csock):
         # set up class fields
-        self.verbose = v;
-        self.socket = csock;
+        self.verbose = v
+        self.socket = csock
    
     # Closes the client socket
     def close(self):
-        self.socket.close();
+        self.socket.close()
 
 
     # ---------------------- Socket Reading/Writing ------------------------- #
     # Calls recv() on the client socket, and returns the read-in data. If the
     # socket has been closed, None is returned
     def read(self, limit = 1024):
-        data = self.socket.recv(limit);
+        data = self.socket.recv(limit)
         # if the socket is closed, return None
         if (not data):
-            return None;
+            return None
         # otherwise, return the data
-        return data;
+        return data
     
     # Takes a given message and writes it to the client socket
     def write(self, msg):
-        self.socket.sendall(str.encode(msg));
+        #self.socket.sendall(str.encode(msg));
+        self.socket.sendall(bytes(msg, encoding="utf8"))
 
 
     # ------------------------- Utility Functions --------------------------- #
     # Prints the string only if 'verbose' is True
     def vprint(self, msg):
         if (self.verbose):
-            print(msg);
+            print(msg)
 
 
+# ========================== Fake Connection Class ========================== #
+# A small class used to 'fake' a connection to an accepter thread. This is done
+# when shutting the server down to get each accepter thread to stop blocking
+# on the accept() system call
+class FakeConnection:
+    # the constructor takes in a SocketListener object belonging to the thread
+    def __init__(self, listener):
+        self.listener = listener
+    
+    # uses the listener to open a socket to the thread listening on it
+    def trigger(self):
+        # create the socket, connect, then close
+        sock = socket.socket(self.listener.socket.family, self.listener.socket.type)
+        sock.connect((socket.gethostname(), self.listener.port))
+        sock.sendall("FAKE CONNECTION: THREAD SHUTDOWN".encode())
+        sock.close()
 
 
 # =========== Runner Code =========== #
-#sl = SocketListener(True, 13650, 6);
+#sl = SocketListener(True, 13650, 6)
 #
-#print("Accepting on IPv%d..." % sl.addrtype);
-#csock = sl.accept();
-#print("csock = %s" % str(csock));
+#print("Accepting on IPv%d..." % sl.addrtype)
+#csock = sl.accept()
+#print("csock = %s" % str(csock))
 #
-#sl.close();
+#sl.close()
